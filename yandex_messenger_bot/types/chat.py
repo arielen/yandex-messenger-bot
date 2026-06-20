@@ -10,5 +10,14 @@ class Chat(YaBotObject):
     organization_id: str | None = None
     title: str | None = None
     description: str | None = None
-    is_channel: bool = False
     thread_id: int | None = None
+
+    @property
+    def is_channel(self) -> bool:
+        """Whether this chat is a channel.
+
+        Derived from :attr:`type` — the only documented channel indicator. A
+        wire-level ``is_channel`` field has never been confirmed in a live
+        update, so ``type`` is authoritative. See docs/api-inconsistencies.md (#9).
+        """
+        return self.type == ChatType.CHANNEL

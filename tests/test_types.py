@@ -238,9 +238,14 @@ class TestChat:
         assert chat.type == ChatType.PRIVATE
 
     def test_chat_type_channel(self):
-        chat = Chat.model_validate({"id": "c-3", "type": "channel", "is_channel": True})
+        chat = Chat.model_validate({"id": "c-3", "type": "channel"})
         assert chat.type == ChatType.CHANNEL
         assert chat.is_channel is True
+
+    def test_is_channel_derived_from_type(self):
+        """is_channel is computed from type; a contradictory wire value is ignored."""
+        chat = Chat.model_validate({"id": "c-4", "type": "group", "is_channel": True})
+        assert chat.is_channel is False  # type wins over the (unconfirmed) wire field
 
 
 # ---------------------------------------------------------------------------
