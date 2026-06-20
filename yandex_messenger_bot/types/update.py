@@ -39,11 +39,20 @@ class Update(YaBotObject):
     sticker: Sticker | None = None
     image: Image | None = None
     images: list[list[Image]] | None = None
-    document: Document | None = None
     file: Document | None = None
 
     # Bot request (from button directives)
     bot_request: BotRequest | None = None
+
+    @property
+    def document(self) -> Document | None:
+        """Ergonomic alias for :attr:`file`.
+
+        The Yandex API delivers file attachments under the wire key ``file``,
+        not ``document``; this alias always mirrors :attr:`file`.
+        See docs/api-inconsistencies.md (#8).
+        """
+        return self.file
 
     # ------------------------------------------------------------------
     # Defensive validators: the Yandex docs are inconsistent about the

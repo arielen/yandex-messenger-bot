@@ -49,7 +49,8 @@ FULL_UPDATE_RAW = {
     },
     "text": "Hello world",
     "thread_id": 5,
-    "document": {
+    # Real wire key is "file" (not "document"); see docs/api-inconsistencies.md (#8).
+    "file": {
         "id": "doc-id-1",
         "name": "report.pdf",
         "mime_type": "application/pdf",
@@ -114,12 +115,17 @@ class TestUpdateParsing:
         assert u.from_user.login == "alice"
         assert u.from_user.robot is False
 
-    def test_full_update_document(self):
+    def test_full_update_file(self):
         u = Update.model_validate(FULL_UPDATE_RAW)
-        assert isinstance(u.document, Document)
-        assert u.document.id == "doc-id-1"
-        assert u.document.mime_type == "application/pdf"
-        assert u.document.size == 204800
+        assert isinstance(u.file, Document)
+        assert u.file.id == "doc-id-1"
+        assert u.file.mime_type == "application/pdf"
+        assert u.file.size == 204800
+
+    def test_document_is_alias_of_file(self):
+        """``document`` is a read-only alias mirroring ``file``."""
+        u = Update.model_validate(FULL_UPDATE_RAW)
+        assert u.document is u.file
 
     def test_images_flat_array_normalized(self):
         """Flat Image[] is auto-normalized to Image[][] by the validator."""
