@@ -42,8 +42,11 @@ class Update(YaBotObject):
     document: Document | None = None
     file: Document | None = None
 
-    # Bot request (from button directives)
+    # Bot request — current mechanism (suggest_buttons + server_action directive)
     bot_request: BotRequest | None = None
+    # Legacy button callback (deprecated inline_keyboard). Kept as a fallback for
+    # bots still sending the old format. See docs/api-inconsistencies.md (#11).
+    callback_data: dict | None = None
 
     # ------------------------------------------------------------------
     # Defensive validators: the Yandex docs are inconsistent about the
