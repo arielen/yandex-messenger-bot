@@ -184,6 +184,13 @@ class TestUpdateParsing:
         assert u.bot_request.element_id == "btn-1"
         assert u.bot_request.errors == []
 
+    def test_legacy_callback_data_parsing(self):
+        """Legacy inline_keyboard button presses arrive as callback_data."""
+        raw = {**MINIMAL_UPDATE_RAW, "callback_data": {"cmd": "help"}}
+        u = Update.model_validate(raw)
+        assert u.callback_data == {"cmd": "help"}
+        assert u.bot_request is None
+
     def test_optional_fields_default_to_none(self):
         u = Update.model_validate(MINIMAL_UPDATE_RAW)
         assert u.from_user is None
@@ -193,6 +200,7 @@ class TestUpdateParsing:
         assert u.document is None
         assert u.images is None
         assert u.bot_request is None
+        assert u.callback_data is None
 
     def test_extra_fields_are_accepted(self):
         """Forward-compat: unknown fields from API must not raise errors."""
