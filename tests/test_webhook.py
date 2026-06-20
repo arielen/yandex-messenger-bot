@@ -31,6 +31,7 @@ _MINIMAL_UPDATE: dict[str, Any] = {
 def _make_app(
     *,
     secret_token: str | None = None,
+    secret_header_name: str = "X-Webhook-Secret",
     max_body_size: int = 1_048_576,
     path: str = "/webhook",
     dispatcher: Dispatcher | None = None,
@@ -42,7 +43,13 @@ def _make_app(
     app = web.Application()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        handler = WebhookHandler(dp, b, secret_token=secret_token, max_body_size=max_body_size)
+        handler = WebhookHandler(
+            dp,
+            b,
+            secret_token=secret_token,
+            secret_header_name=secret_header_name,
+            max_body_size=max_body_size,
+        )
     handler.setup(app, path=path)
     return app, dp, b
 
@@ -50,12 +57,14 @@ def _make_app(
 async def _make_client(
     *,
     secret_token: str | None = None,
+    secret_header_name: str = "X-Webhook-Secret",
     max_body_size: int = 1_048_576,
     dispatcher: Dispatcher | None = None,
     bot: MockedBot | None = None,
 ) -> tuple[TestClient, Dispatcher, MockedBot]:
     app, dp, b = _make_app(
         secret_token=secret_token,
+        secret_header_name=secret_header_name,
         max_body_size=max_body_size,
         dispatcher=dispatcher,
         bot=bot,
@@ -120,7 +129,7 @@ class TestWebhookAuthentication:
     async def test_correct_secret_token_returns_200(self) -> None:
         client, _, _ = await _make_client(secret_token="my-secret")
         try:
-            resp = await _post(client, headers={"X-Secret-Token": "my-secret"})
+            resp = await _post(client, headers={"X-Webhook-Secret": "my-secret"})
             assert resp.status == 200
         finally:
             await client.close()
@@ -133,10 +142,23 @@ class TestWebhookAuthentication:
         finally:
             await client.close()
 
+    async def test_custom_secret_header_name(self) -> None:
+        client, _, _ = await _make_client(
+            secret_token="my-secret", secret_header_name="X-Custom-Secret"
+        )
+        try:
+            ok = await _post(client, headers={"X-Custom-Secret": "my-secret"})
+            assert ok.status == 200
+            # the default header is ignored when a custom one is configured
+            wrong = await _post(client, headers={"X-Webhook-Secret": "my-secret"})
+            assert wrong.status == 401
+        finally:
+            await client.close()
+
     async def test_wrong_secret_token_returns_401(self) -> None:
         client, _, _ = await _make_client(secret_token="correct")
         try:
-            resp = await _post(client, headers={"X-Secret-Token": "wrong"})
+            resp = await _post(client, headers={"X-Webhook-Secret": "wrong"})
             assert resp.status == 401
         finally:
             await client.close()
@@ -144,7 +166,7 @@ class TestWebhookAuthentication:
     async def test_empty_secret_token_header_returns_401(self) -> None:
         client, _, _ = await _make_client(secret_token="nonempty")
         try:
-            resp = await _post(client, headers={"X-Secret-Token": ""})
+            resp = await _post(client, headers={"X-Webhook-Secret": ""})
             assert resp.status == 401
         finally:
             await client.close()

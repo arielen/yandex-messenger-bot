@@ -15,6 +15,11 @@ if TYPE_CHECKING:
     from yandex_messenger_bot.dispatcher.dispatcher import Dispatcher
 
 _DEFAULT_MAX_BODY_SIZE = 1_048_576  # 1 MiB
+# The header Yandex uses to deliver the shared secret is not documented; the only
+# named community evidence (rekurt/ymsdk, Go, 2026-04-08) uses "X-Webhook-Secret".
+# Configurable via ``secret_header_name`` so it can be overridden once confirmed.
+# See docs/api-inconsistencies.md (#9).
+_DEFAULT_SECRET_HEADER = "X-Webhook-Secret"  # noqa: S105 — HTTP header name, not a secret
 
 
 class WebhookHandler:
@@ -26,11 +31,13 @@ class WebhookHandler:
         bot: Bot,
         *,
         secret_token: str | None = None,
+        secret_header_name: str = _DEFAULT_SECRET_HEADER,
         max_body_size: int = _DEFAULT_MAX_BODY_SIZE,
     ) -> None:
         self._dispatcher = dispatcher
         self._bot = bot
         self._secret_token = secret_token
+        self._secret_header_name = secret_header_name
         self._max_body_size = max_body_size
         if secret_token is None:
             warnings.warn(
@@ -44,7 +51,7 @@ class WebhookHandler:
         """Parse the incoming JSON body as an Update and dispatch it."""
         # --- Authentication ---
         if self._secret_token is not None:
-            token = request.headers.get("X-Secret-Token")
+            token = request.headers.get(self._secret_header_name)
             if not hmac.compare_digest(token or "", self._secret_token):
                 return web.Response(status=401)
 
